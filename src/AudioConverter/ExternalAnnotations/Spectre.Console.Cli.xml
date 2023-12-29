@@ -1,0 +1,9 @@
+<assembly name="Spectre.Console.Cli">
+    <members>
+        <member name="T:Spectre.Console.Cli.ICommand">
+            <attribute ctor="M:JetBrains.Annotations.UsedImplicitlyAttribute.#ctor(JetBrains.Annotations.ImplicitUseTargetFlags)" >
+                <argument>4</argument>
+            </attribute>
+        </member>
+    </members>
+</assembly>

@@ -1,3 +1,6 @@
+using Spectre.Console;
+using Spectre.Console.Cli;
+
 namespace AudioConverter;
 
 internal sealed class ConvertCommandSettings : CommandSettings
