@@ -2,6 +2,9 @@ eng;English
 spa;Spanish
 fra;French
 fre;French
+dut;Dutch
+chi;Chinese
+gre;Greek
 zho;Mandarin Chinese
 hin;Hindi
 ara;Arabic

@@ -15,8 +15,8 @@ internal sealed class ConvertCommandSettings : CommandSettings
 
     public override ValidationResult Validate()
     {
-        return File.Exists(VideoFilePath) 
-            ? ValidationResult.Success() 
+        return File.Exists(VideoFilePath)
+            ? ValidationResult.Success()
             : ValidationResult.Error($"File {VideoFilePath} does not exist.");
     }
 }

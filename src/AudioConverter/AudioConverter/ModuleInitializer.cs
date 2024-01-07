@@ -11,7 +11,7 @@ internal static class ModuleInitializer
         // TODO: Make this configurable or detect automatically
         if (OperatingSystem.IsMacOS())
         {
-            FFmpeg.SetExecutablesPath("/opt/homebrew/Cellar/ffmpeg/6.1/bin/");
+            FFmpeg.SetExecutablesPath("/opt/homebrew/bin/");
         }
         else if (OperatingSystem.IsLinux())
         {

@@ -1,16 +1,13 @@
 namespace AudioConverter;
 
-internal sealed class ConsoleAppCancellationTokenSource 
+internal sealed class ConsoleAppCancellationTokenSource
 {
     private readonly CancellationTokenSource _cancellationTokenSource = new();
-
-    public CancellationToken Token => _cancellationTokenSource.Token;
 
     public ConsoleAppCancellationTokenSource()
     {
         Console.CancelKeyPress += OnCancelKeyPress;
         AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
-
         using var _ = _cancellationTokenSource.Token.Register(() =>
             {
                 AppDomain.CurrentDomain.ProcessExit -= OnProcessExit;
@@ -19,11 +16,12 @@ internal sealed class ConsoleAppCancellationTokenSource
         );
     }
 
+    public CancellationToken Token => _cancellationTokenSource.Token;
+
     private void OnCancelKeyPress(object? sender, ConsoleCancelEventArgs e)
     {
         // NOTE: cancel event, don't terminate the process
         e.Cancel = true;
-
         _cancellationTokenSource.Cancel();
     }
 

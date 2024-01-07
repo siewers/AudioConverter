@@ -24,6 +24,7 @@ internal static class LanguageMap
     {
         LanguageMapStream.Seek(0, SeekOrigin.Begin);
         using var streamReader = new StreamReader(LanguageMapStream, Encoding.UTF8, false, 64, true);
+
         while (streamReader.ReadLine() is { } entry)
         {
             if (entry.StartsWith(languageCode, StringComparison.InvariantCultureIgnoreCase))
@@ -33,6 +34,5 @@ internal static class LanguageMap
         }
 
         return languageCode;
-
     }
 }

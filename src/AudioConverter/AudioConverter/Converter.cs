@@ -26,18 +26,20 @@ internal sealed class Converter
         }
 
         var audioStreams = _mediaInfo.AudioStreams.ToArray();
-
         List<IAudioStream> selectedAudioStreams;
+
         if (audioStreams.Length > 0)
         {
             var audioStreamsPrompt = new MultiSelectionPrompt<IAudioStream>()
                 .Title("Select audio streams to convert")
-                .UseConverter(stream => $"({stream.Index}) {stream.ToDisplayString()}");
+                .PageSize(15)
+                .UseConverter(stream => stream.ToDisplayString());
 
             foreach (var audioStream in audioStreams)
             {
                 var choice = audioStreamsPrompt.AddChoice(audioStream);
-                if (audioStream.IsDts() && audioStream.IsPreferredLanguage())
+
+                if ((audioStream.IsDts() || audioStream.IsDolby()) && audioStream.IsPreferredLanguage())
                 {
                     choice.Select();
                 }
@@ -52,9 +54,11 @@ internal sealed class Converter
         }
 
         _console.MarkupLine("Audio stream:");
+
         foreach (var audioStream in audioStreams)
         {
             _console.MarkupInterpolated($" - [bold]{audioStream.ToDisplayString()}[/] ");
+
             if (selectedAudioStreams.Contains(audioStream))
             {
                 conversion.AddStream(audioStream);
@@ -78,16 +82,19 @@ internal sealed class Converter
 
         var subtitleStreams = _mediaInfo.SubtitleStreams.ToArray();
         List<ISubtitleStream> selectedSubtitleStreams = [];
+
         if (subtitleStreams.Length > 0)
         {
             var prompt = new MultiSelectionPrompt<ISubtitleStream>()
                 .Title("Select subtitle streams to keep")
                 .NotRequired()
-                .UseConverter(s => $"({s.Index}) {s.ToDisplayString()}");
+                .PageSize(15)
+                .UseConverter(s => s.ToDisplayString());
 
             foreach (var subtitleStream in subtitleStreams)
             {
                 var choice = prompt.AddChoice(subtitleStream);
+
                 if (subtitleStream.IsPreferredLanguage())
                 {
                     choice.Select();
@@ -105,10 +112,10 @@ internal sealed class Converter
         foreach (var subtitleStream in subtitleStreams)
         {
             _console.MarkupInterpolated($" - [bold]{subtitleStream.ToDisplayString()}[/] ");
+
             if (selectedSubtitleStreams.Contains(subtitleStream))
             {
                 conversion.AddStream(subtitleStream.SetCodec(SubtitleCodec.copy));
-
                 _console.MarkupLine("will be [green underline]kept[/].");
             }
             else
@@ -119,7 +126,6 @@ internal sealed class Converter
 
         var outputFilePath = GetOutputFilePath();
         conversion.SetOutput(outputFilePath);
-
         var progress = new Progress(_console)
             .AutoClear(true)
             .AutoRefresh(true)
@@ -127,10 +133,7 @@ internal sealed class Converter
                 [
                     new ProgressBarColumn(),
                     new PercentageColumn(),
-                    new SpinnerColumn
-                    {
-                        Spinner = Spinner.Known.Clock,
-                    },
+                    new SpinnerColumn(BinarySpinner.Instance),
                     new TaskDescriptionColumn(),
                     new RemainingTimeColumn(),
                 ]
@@ -145,7 +148,6 @@ internal sealed class Converter
                         .MaxValue(100);
 
                     conversion.OnProgress += (_, args) => { conversionTask.Value(args.Percent); };
-
                     var conversionResult = await conversion.Start(cancellationToken);
                     _console.MarkupLineInterpolated($"Conversion completed in [green]{conversionResult.Duration.ToHumanTimeString()}[/].");
                     _console.MarkupLineInterpolated($"Output file: [green]{outputFilePath}[/]");
@@ -157,7 +159,6 @@ internal sealed class Converter
     {
         var outputFileExtension = Path.GetExtension(_mediaInfo.Path);
         var outputFileName = $"{Path.GetFileNameWithoutExtension(_mediaInfo.Path)}-converted-{DateTime.Now.Ticks}{outputFileExtension}";
-
         return Path.Combine(Path.GetDirectoryName(_mediaInfo.Path)!, outputFileName);
     }
 }
