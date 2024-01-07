@@ -1,23 +1,24 @@
 using Spectre.Console;
 using Xabe.FFmpeg;
-using Xabe.FFmpeg.Exceptions;
 using Xabe.FFmpeg.Streams.SubtitleStream;
 
 namespace AudioConverter;
 
 internal sealed class Converter
 {
-    private HashSet<string> _acceptedSubtitleLanguages = ["dan", "eng"];
+    private readonly IAnsiConsole _console;
     private readonly IMediaInfo _mediaInfo;
 
-    public Converter(IMediaInfo mediaInfo)
+    public Converter(IAnsiConsole console, IMediaInfo mediaInfo)
     {
-        _mediaInfo = mediaInfo;
+        _console = console ?? throw new ArgumentNullException(nameof(console));
+        _mediaInfo = mediaInfo ?? throw new ArgumentNullException(nameof(mediaInfo));
     }
 
-    public async Task Convert()
+    public async Task Convert(CancellationToken cancellationToken = default)
     {
         var conversion = FFmpeg.Conversions.New();
+
         foreach (var videoStream in _mediaInfo.VideoStreams)
         {
             videoStream.SetCodec(VideoCodec.copy);
@@ -36,34 +37,42 @@ internal sealed class Converter
             foreach (var audioStream in audioStreams)
             {
                 var choice = audioStreamsPrompt.AddChoice(audioStream);
-                if (audioStream.IsDts())
+                if (audioStream.IsDts() && audioStream.IsPreferredLanguage())
                 {
                     choice.Select();
                 }
             }
 
-            selectedAudioStreams = AnsiConsole.Prompt(audioStreamsPrompt);
+            selectedAudioStreams = await audioStreamsPrompt.ShowAsync(_console, cancellationToken);
         }
         else
         {
-            AnsiConsole.MarkupLine("[red]No audio streams found in file.[/]");
+            _console.MarkupLine("[red]No audio streams found in file - exiting.[/]");
             return;
         }
 
-        foreach (var audioStream in selectedAudioStreams)
+        _console.MarkupLine("Audio stream:");
+        foreach (var audioStream in audioStreams)
         {
-            if (audioStream.IsDts())
+            _console.MarkupInterpolated($" - [bold]{audioStream.ToDisplayString()}[/] ");
+            if (selectedAudioStreams.Contains(audioStream))
             {
-                AnsiConsole.MarkupLineInterpolated(
-                    $"[green]Audio stream {audioStream.ToDisplayString()} is in DTS and will be converted to EAC3.[/]");
-                audioStream.SetCodec(AudioCodec.eac3);
                 conversion.AddStream(audioStream);
+
+                if (audioStream.IsDts())
+                {
+                    _console.MarkupLineInterpolated($"is in DTS and will be [green underline]converted to EAC3[/].");
+                    audioStream.SetCodec(AudioCodec.eac3);
+                }
+                else
+                {
+                    _console.MarkupLineInterpolated($"will be [yellow underline]copied as-is[/].");
+                    audioStream.CopyStream();
+                }
             }
             else
             {
-                AnsiConsole.MarkupLineInterpolated(
-                    $"[yellow bold]Audio stream {audioStream.ToDisplayString()} is not in DTS and will be kept as-is.[/]");
-                audioStream.CopyStream();
+                _console.MarkupLineInterpolated($"will be [red underline]removed[/].");
             }
         }
 
@@ -73,67 +82,82 @@ internal sealed class Converter
         {
             var prompt = new MultiSelectionPrompt<ISubtitleStream>()
                 .Title("Select subtitle streams to keep")
-                .UseConverter(s => "Language: " + s.Language);
+                .NotRequired()
+                .UseConverter(s => $"({s.Index}) {s.ToDisplayString()}");
 
             foreach (var subtitleStream in subtitleStreams)
             {
                 var choice = prompt.AddChoice(subtitleStream);
-                if (_acceptedSubtitleLanguages.Contains(subtitleStream.Language))
+                if (subtitleStream.IsPreferredLanguage())
                 {
                     choice.Select();
                 }
             }
 
-            selectedSubtitleStreams = AnsiConsole.Prompt(prompt);
+            selectedSubtitleStreams = await prompt.ShowAsync(_console, cancellationToken);
         }
 
-        conversion.AddStream(selectedSubtitleStreams);
+        if (subtitleStreams.Length > 0)
+        {
+            _console.MarkupLine("Subtitle streams:");
+        }
+
         foreach (var subtitleStream in subtitleStreams)
         {
+            _console.MarkupInterpolated($" - [bold]{subtitleStream.ToDisplayString()}[/] ");
             if (selectedSubtitleStreams.Contains(subtitleStream))
             {
-                subtitleStream.SetCodec(SubtitleCodec.copy);
+                conversion.AddStream(subtitleStream.SetCodec(SubtitleCodec.copy));
+
+                _console.MarkupLine("will be [green underline]kept[/].");
+            }
+            else
+            {
+                _console.MarkupLine("will be [red underline]removed[/].");
             }
         }
+
+        var outputFilePath = GetOutputFilePath();
+        conversion.SetOutput(outputFilePath);
+
+        var progress = new Progress(_console)
+            .AutoClear(true)
+            .AutoRefresh(true)
+            .Columns(
+                [
+                    new ProgressBarColumn(),
+                    new PercentageColumn(),
+                    new SpinnerColumn
+                    {
+                        Spinner = Spinner.Known.Clock,
+                    },
+                    new TaskDescriptionColumn(),
+                    new RemainingTimeColumn(),
+                ]
+            );
+
+        await progress
+            .StartAsync(
+                async context =>
+                {
+                    var conversionTask = context.AddTask("[green]Converting... [/][grey](press Ctrl+C to cancel)[/]")
+                        .IsIndeterminate(false)
+                        .MaxValue(100);
+
+                    conversion.OnProgress += (_, args) => { conversionTask.Value(args.Percent); };
+
+                    var conversionResult = await conversion.Start(cancellationToken);
+                    _console.MarkupLineInterpolated($"Conversion completed in [green]{conversionResult.Duration.ToHumanTimeString()}[/].");
+                    _console.MarkupLineInterpolated($"Output file: [green]{outputFilePath}[/]");
+                }
+            );
+    }
+
+    private string GetOutputFilePath()
+    {
         var outputFileExtension = Path.GetExtension(_mediaInfo.Path);
         var outputFileName = $"{Path.GetFileNameWithoutExtension(_mediaInfo.Path)}-converted-{DateTime.Now.Ticks}{outputFileExtension}";
 
-        var outputFilePath = Path.Combine(Path.GetDirectoryName(_mediaInfo.Path)!, outputFileName);
-        conversion.SetOutput(outputFilePath);
-
-        var progress = AnsiConsole.Progress()
-            .AutoClear(true)
-            .Columns([
-                new ProgressBarColumn(),
-                new PercentageColumn(),
-                new TaskDescriptionColumn(),
-                new RemainingTimeColumn()
-            ]);
-        await progress.StartAsync(async context =>
-        {
-            var conversionTask = context.AddTask("[green]Converting...[/]")
-                .IsIndeterminate(false)
-                .MaxValue(100);
-
-            conversion.OnProgress += (_, args) => { conversionTask.Value(args.Percent); };
-
-            try
-            {
-                var conversionResult = await conversion.Start();
-                AnsiConsole.MarkupLineInterpolated($"Conversion completed in [green]{conversionResult.Duration.ToHumanTimeString()}[/].");
-                AnsiConsole.MarkupLineInterpolated($"Output file: [green]{outputFilePath}[/]");
-            }
-            catch (ConversionException ex)
-            {
-                AnsiConsole.MarkupLine("[red]Conversion failed![/]");
-                AnsiConsole.MarkupLine($"[red]{ex.Message}[/]");
-            }
-            catch (Exception ex)
-            {
-                AnsiConsole.MarkupLine("[red]Conversion failed![/]");
-                AnsiConsole.MarkupLine($"[red]{ex.Message}[/]");
-                AnsiConsole.MarkupLine($"[red]{ex.StackTrace}[/]");
-            }
-        });
+        return Path.Combine(Path.GetDirectoryName(_mediaInfo.Path)!, outputFileName);
     }
 }

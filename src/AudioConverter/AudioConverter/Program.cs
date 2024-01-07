@@ -1,5 +1,11 @@
-﻿using AudioConverter;
-using Spectre.Console.Cli;
+﻿using Spectre.Console.Cli;
 
-var app = new CommandApp<ConvertCommand>();
-return await app.RunAsync(args);
+namespace AudioConverter;
+
+internal static class Program
+{
+    private async static Task<int> Main(string[] args)
+    {
+        return await new CommandApp<ConvertCommand>().RunAsync(args);
+    }
+}

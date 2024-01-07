@@ -13,5 +13,9 @@ internal static class ModuleInitializer
         {
             FFmpeg.SetExecutablesPath("/opt/homebrew/Cellar/ffmpeg/6.1/bin/");
         }
+        else if (OperatingSystem.IsLinux())
+        {
+            FFmpeg.SetExecutablesPath("/var/packages/ffmpeg6/target/bin/");
+        }
     }
 }
