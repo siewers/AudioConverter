@@ -5,10 +5,10 @@ namespace AudioConverter.Prompts;
 
 internal sealed class AudioStreamPrompt
 {
-    private readonly IReadOnlyCollection<IAudioStream> _audioStreams;
+    private readonly IReadOnlyList<IAudioStream> _audioStreams;
     private readonly IAnsiConsole _console;
 
-    public AudioStreamPrompt(IAnsiConsole console, IReadOnlyCollection<IAudioStream> audioStreams)
+    public AudioStreamPrompt(IAnsiConsole console, IReadOnlyList<IAudioStream> audioStreams)
     {
         _console = console;
         _audioStreams = audioStreams;
@@ -44,10 +44,12 @@ internal sealed class AudioStreamPrompt
                 // If there is only one audio stream, we don't need to ask the user to select it
                 selectedAudioStreams.AddRange(_audioStreams);
                 break;
-            default:
-                _console.MarkupLine("[red]No audio streams found in file - exiting.[/]");
-                Environment.Exit(0);
-                break;
+        }
+
+        if (selectedAudioStreams.Count == 0 || selectedAudioStreams.All(s => !s.IsDts()))
+        {
+            _console.MarkupLine("[red]No audio streams to convert - exiting.[/]");
+            Environment.Exit(0);
         }
 
         _console.MarkupLine("Selected audio stream:");
