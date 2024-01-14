@@ -43,7 +43,7 @@ internal sealed class SubtitleStreamPrompt
 
         if (subtitleStreams.Length > 0)
         {
-            _console.MarkupLine("Subtitle streams:");
+            _console.MarkupLine("Selected subtitle streams:");
         }
 
         foreach (var subtitleStream in subtitleStreams)
