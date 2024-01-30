@@ -1,3 +1,4 @@
+using AudioConverter.Prompts;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using Xabe.FFmpeg;
@@ -7,34 +8,49 @@ namespace AudioConverter;
 
 internal sealed class ConvertCommand : AsyncCommand<ConvertCommandSettings>
 {
+    private readonly IAnsiConsole _console;
+    private readonly MediaFileSelectionPrompt _mediaFileSelectionPrompt;
+
+    public ConvertCommand()
+    {
+        _console = AnsiConsole.Console;
+        _mediaFileSelectionPrompt = new MediaFileSelectionPrompt(_console);
+    }
+
     public override async Task<int> ExecuteAsync(CommandContext context, ConvertCommandSettings settings)
     {
-        var cancellationTokenSource = new ConsoleAppCancellationTokenSource();
-        var console = AnsiConsole.Console;
-        var mediaInfo = await FFmpeg.GetMediaInfo(settings.VideoFilePath);
-        var converter = new Converter(console, mediaInfo);
+        var videoFile = settings.VideoFile is null
+            ? await _mediaFileSelectionPrompt.GetMediaFile(settings.WorkingDirectory, settings.CancellationToken)
+            : null;
+
+        if (videoFile is null)
+        {
+            _console.MarkupLine("[red]No video file selected - exiting.[/]");
+            return -1;
+        }
 
         try
         {
-            await converter.Convert(cancellationTokenSource.Token);
+            var mediaInfo = await FFmpeg.GetMediaInfo(videoFile.FullName);
+            var converter = new Converter(_console, mediaInfo);
+            await converter.Convert(settings.CancellationToken);
         }
         catch (ConversionException ex)
         {
-            console.WriteLine();
-            console.MarkupLine("[red]Conversion failed![/]");
-            console.MarkupLine($"[red]{ex.Message}[/]");
+            _console.WriteLine();
+            _console.MarkupLine("[red]Conversion failed![/]");
+            _console.MarkupLine($"[red]{ex.Message}[/]");
         }
         catch (OperationCanceledException)
         {
-            console.WriteLine();
-            console.MarkupLine("[red]Conversion cancelled![/]");
+            _console.WriteLine();
+            _console.MarkupLine("[red]Conversion cancelled![/]");
         }
         catch (Exception ex)
         {
-            console.WriteLine();
-            console.MarkupLine("[red]Conversion failed![/]");
-            console.MarkupLine($"[red]{ex.Message}[/]");
-            console.MarkupLine($"[red]{ex.StackTrace}[/]");
+            _console.WriteLine();
+            _console.MarkupLine("[red]Conversion failed![/]");
+            _console.WriteException(ex);
         }
 
         return 0;

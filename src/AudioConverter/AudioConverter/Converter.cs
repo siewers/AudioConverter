@@ -29,6 +29,10 @@ internal sealed class Converter
             conversion.AddStream(videoStream);
         }
 
+        _console.MarkupLine("[green][bold]Media info[/][/]");
+        _console.MarkupLineInterpolated($"[bold]Input file:[/] {_mediaInfo.Path}");
+        _console.MarkupLineInterpolated($"[bold]Duration:[/] {_mediaInfo.Duration.ToDurationString()}");
+
         var selectedAudioStreams = await _audioStreamPrompt.SelectAudioStreams(cancellationToken);
         conversion.AddStream(selectedAudioStreams);
 
