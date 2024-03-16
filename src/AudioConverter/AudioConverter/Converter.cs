@@ -67,7 +67,9 @@ internal sealed class Converter(IAnsiConsole console, IMediaInfo mediaInfo)
 
         if (_console.Confirm("Do you want to overwrite the original file?"))
         {
+            _console.MarkupLine("Moving file, please wait...");
             File.Move(outputFilePath, _mediaInfo.Path, overwrite: true);
+            _console.MarkupLine("[green]Done![/]");
         }
         else
         {
