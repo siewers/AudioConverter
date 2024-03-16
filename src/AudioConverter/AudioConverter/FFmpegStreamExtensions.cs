@@ -5,6 +5,19 @@ namespace AudioConverter;
 
 internal static class FFmpegStreamExtensions
 {
+    private static readonly List<string> DtsCodecs =
+    [
+        nameof(AudioCodec.dts),
+    ];
+
+    private static readonly List<string> DolbyCodecs =
+    [
+        nameof(AudioCodec.ac3),
+        nameof(AudioCodec.eac3),
+        nameof(AudioCodec.truehd),
+        nameof(AudioCodec.dolby_e),
+    ];
+
     private static readonly HashSet<string> PreferredLanguages = ["dan", "eng"];
 
     public static string ToDisplayString(this IAudioStream stream)
@@ -14,12 +27,12 @@ internal static class FFmpegStreamExtensions
 
     public static bool IsDts(this IAudioStream stream)
     {
-        return stream.Codec.Contains("dts", StringComparison.InvariantCultureIgnoreCase);
+        return DtsCodecs.Contains(stream.Codec, StringComparer.OrdinalIgnoreCase);
     }
 
     public static bool IsDolby(this IAudioStream stream)
     {
-        return stream.Codec.Contains("ac3", StringComparison.InvariantCultureIgnoreCase);
+        return DolbyCodecs.Contains(stream.Codec, StringComparer.OrdinalIgnoreCase);
     }
 
     public static bool IsPreferredLanguage(this IStream stream)

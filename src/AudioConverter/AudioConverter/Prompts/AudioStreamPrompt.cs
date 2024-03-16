@@ -20,7 +20,13 @@ internal sealed class AudioStreamPrompt
 
         switch (_audioStreams.Count)
         {
-            case > 1:
+            case 0:
+                break;
+            case 1:
+                // If there is only one audio stream, we don't need to ask the user to select it
+                selectedAudioStreams.AddRange(_audioStreams);
+                break;
+            default:
             {
                 var audioStreamsPrompt = new MultiSelectionPrompt<IAudioStream>()
                     .Title("Select audio streams to convert")
@@ -40,13 +46,9 @@ internal sealed class AudioStreamPrompt
                 selectedAudioStreams = await audioStreamsPrompt.ShowAsync(_console, cancellationToken);
                 break;
             }
-            case 1:
-                // If there is only one audio stream, we don't need to ask the user to select it
-                selectedAudioStreams.AddRange(_audioStreams);
-                break;
         }
 
-        if (selectedAudioStreams.Count == 0 || selectedAudioStreams.All(s => !s.IsDts()))
+        if (selectedAudioStreams.Count == 0)
         {
             _console.MarkupLine("[red]No audio streams to convert - exiting.[/]");
             Environment.Exit(0);
