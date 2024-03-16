@@ -62,9 +62,17 @@ internal sealed class Converter(IAnsiConsole console, IMediaInfo mediaInfo)
                     conversion.OnProgress += (_, args) => { conversionTask.Value(args.Percent); };
                     var conversionResult = await conversion.Start(cancellationToken);
                     _console.MarkupLineInterpolated($"Conversion completed in [green]{conversionResult.Duration.ToDurationString()}[/].");
-                    _console.MarkupLineInterpolated($"Output file: [green]{outputFilePath}[/]");
                 }
             );
+
+        if (_console.Confirm("Do you want to overwrite the original file?"))
+        {
+            File.Move(outputFilePath, _mediaInfo.Path, overwrite: true);
+        }
+        else
+        {
+            _console.MarkupLineInterpolated($"Output file: [green]{outputFilePath}[/]");
+        }
     }
 
     private string GetOutputFilePath()
