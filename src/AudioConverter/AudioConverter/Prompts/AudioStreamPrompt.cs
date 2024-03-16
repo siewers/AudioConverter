@@ -3,28 +3,19 @@ using Xabe.FFmpeg;
 
 namespace AudioConverter.Prompts;
 
-internal sealed class AudioStreamPrompt
+internal sealed class AudioStreamPrompt(IAnsiConsole console, IReadOnlyCollection<IAudioStream> audioStreams)
 {
-    private readonly IReadOnlyList<IAudioStream> _audioStreams;
-    private readonly IAnsiConsole _console;
-
-    public AudioStreamPrompt(IAnsiConsole console, IReadOnlyList<IAudioStream> audioStreams)
-    {
-        _console = console;
-        _audioStreams = audioStreams;
-    }
-
     public async Task<IReadOnlyList<IAudioStream>> SelectAudioStreams(CancellationToken cancellationToken)
     {
         List<IAudioStream> selectedAudioStreams = [];
 
-        switch (_audioStreams.Count)
+        switch (audioStreams.Count)
         {
             case 0:
                 break;
             case 1:
                 // If there is only one audio stream, we don't need to ask the user to select it
-                selectedAudioStreams.AddRange(_audioStreams);
+                selectedAudioStreams.AddRange(audioStreams);
                 break;
             default:
             {
@@ -33,7 +24,7 @@ internal sealed class AudioStreamPrompt
                     .PageSize(15)
                     .UseConverter(stream => stream.ToDisplayString());
 
-                foreach (var audioStream in _audioStreams)
+                foreach (var audioStream in audioStreams)
                 {
                     var choice = audioStreamsPrompt.AddChoice(audioStream);
 
@@ -43,39 +34,39 @@ internal sealed class AudioStreamPrompt
                     }
                 }
 
-                selectedAudioStreams = await audioStreamsPrompt.ShowAsync(_console, cancellationToken);
+                selectedAudioStreams = await audioStreamsPrompt.ShowAsync(console, cancellationToken);
                 break;
             }
         }
 
         if (selectedAudioStreams.Count == 0)
         {
-            _console.MarkupLine("[red]No audio streams to convert - exiting.[/]");
+            console.MarkupLine("[red]No audio streams to convert - exiting.[/]");
             Environment.Exit(0);
         }
 
-        _console.MarkupLine("Selected audio stream:");
+        console.MarkupLine("Selected audio stream:");
 
-        foreach (var audioStream in _audioStreams)
+        foreach (var audioStream in audioStreams)
         {
-            _console.MarkupInterpolated($" - [bold]{audioStream.ToDisplayString()}[/] ");
+            console.MarkupInterpolated($" - [bold]{audioStream.ToDisplayString()}[/] ");
 
             if (selectedAudioStreams.Contains(audioStream))
             {
                 if (audioStream.IsDts())
                 {
-                    _console.MarkupLineInterpolated($"is in DTS and will be [green underline]converted to EAC3[/].");
+                    console.MarkupLineInterpolated($"is in DTS and will be [green underline]converted to EAC3[/].");
                     audioStream.SetCodec(AudioCodec.eac3);
                 }
                 else
                 {
-                    _console.MarkupLineInterpolated($"will be [yellow underline]copied as-is[/].");
+                    console.MarkupLineInterpolated($"will be [yellow underline]copied as-is[/].");
                     audioStream.CopyStream();
                 }
             }
             else
             {
-                _console.MarkupLineInterpolated($"will be [red underline]removed[/].");
+                console.MarkupLineInterpolated($"will be [red underline]removed[/].");
             }
         }
 

@@ -2,15 +2,9 @@ using Spectre.Console;
 
 namespace AudioConverter.Prompts;
 
-public class MediaFileSelectionPrompt
+public class MediaFileSelectionPrompt(IAnsiConsole console)
 {
-    private readonly IAnsiConsole _console;
     private readonly string[] _validExtensions = [".mkv", ".mp4", ".avi", ".mov", ".wmv", ".flv", ".webm"];
-
-    public MediaFileSelectionPrompt(IAnsiConsole console)
-    {
-        _console = console;
-    }
 
     public async Task<FileInfo?> GetMediaFile(DirectoryInfo workingDirectory, CancellationToken cancellationToken)
     {
@@ -21,17 +15,17 @@ public class MediaFileSelectionPrompt
             case 0:
                 return null;
             case 1:
-                _console.MarkupLine($"Found video file: [bold]{validFiles[0].Name}[/]");
+                console.MarkupLine($"Found video file: [bold]{validFiles[0].Name}[/]");
                 return validFiles[0];
             default:
             {
-                _console.MarkupLine("Multiple video files found");
+                console.MarkupLine("Multiple video files found");
                 var prompt = new SelectionPrompt<FileInfo>()
                     .Title("Select video file to convert")
                     .AddChoices(validFiles)
                     .UseConverter(file => file.Name);
 
-                return await prompt.ShowAsync(_console, cancellationToken);
+                return await prompt.ShowAsync(console, cancellationToken);
             }
         }
     }

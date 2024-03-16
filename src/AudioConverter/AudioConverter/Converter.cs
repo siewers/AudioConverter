@@ -4,20 +4,12 @@ using Xabe.FFmpeg;
 
 namespace AudioConverter;
 
-internal sealed class Converter
+internal sealed class Converter(IAnsiConsole console, IMediaInfo mediaInfo)
 {
-    private readonly AudioStreamPrompt _audioStreamPrompt;
-    private readonly IAnsiConsole _console;
-    private readonly IMediaInfo _mediaInfo;
-    private readonly SubtitleStreamPrompt _subtitleStreamPrompt;
-
-    public Converter(IAnsiConsole console, IMediaInfo mediaInfo)
-    {
-        _console = console ?? throw new ArgumentNullException(nameof(console));
-        _mediaInfo = mediaInfo ?? throw new ArgumentNullException(nameof(mediaInfo));
-        _audioStreamPrompt = new AudioStreamPrompt(console, mediaInfo.AudioStreams.ToArray());
-        _subtitleStreamPrompt = new SubtitleStreamPrompt(console, mediaInfo.SubtitleStreams.ToArray());
-    }
+    private readonly AudioStreamPrompt _audioStreamPrompt = new(console, mediaInfo.AudioStreams.ToArray());
+    private readonly IAnsiConsole _console = console ?? throw new ArgumentNullException(nameof(console));
+    private readonly IMediaInfo _mediaInfo = mediaInfo ?? throw new ArgumentNullException(nameof(mediaInfo));
+    private readonly SubtitleStreamPrompt _subtitleStreamPrompt = new(console, mediaInfo.SubtitleStreams.ToArray());
 
     public async Task Convert(CancellationToken cancellationToken = default)
     {

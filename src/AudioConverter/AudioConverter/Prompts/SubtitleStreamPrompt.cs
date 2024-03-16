@@ -4,20 +4,11 @@ using Xabe.FFmpeg.Streams.SubtitleStream;
 
 namespace AudioConverter.Prompts;
 
-internal sealed class SubtitleStreamPrompt
+internal sealed class SubtitleStreamPrompt(IAnsiConsole console, IReadOnlyCollection<ISubtitleStream> streams)
 {
-    private readonly IAnsiConsole _console;
-    private readonly IReadOnlyCollection<ISubtitleStream> _subtitleStreams;
-
-    public SubtitleStreamPrompt(IAnsiConsole console, IReadOnlyCollection<ISubtitleStream> subtitleStreams)
-    {
-        _console = console;
-        _subtitleStreams = subtitleStreams;
-    }
-
     public async Task<IReadOnlyList<ISubtitleStream>> SelectSubtitles(CancellationToken cancellationToken)
     {
-        var subtitleStreams = _subtitleStreams.ToArray();
+        var subtitleStreams = streams.ToArray();
         List<ISubtitleStream> selectedSubtitleStreams = [];
 
         if (subtitleStreams.Length > 0)
@@ -38,26 +29,26 @@ internal sealed class SubtitleStreamPrompt
                 }
             }
 
-            selectedSubtitleStreams = await prompt.ShowAsync(_console, cancellationToken);
+            selectedSubtitleStreams = await prompt.ShowAsync(console, cancellationToken);
         }
 
         if (subtitleStreams.Length > 0)
         {
-            _console.MarkupLine("Selected subtitle streams:");
+            console.MarkupLine("Selected subtitle streams:");
         }
 
         foreach (var subtitleStream in subtitleStreams)
         {
-            _console.MarkupInterpolated($" - [bold]{subtitleStream.ToDisplayString()}[/] ");
+            console.MarkupInterpolated($" - [bold]{subtitleStream.ToDisplayString()}[/] ");
 
             if (selectedSubtitleStreams.Contains(subtitleStream))
             {
                 subtitleStream.SetCodec(SubtitleCodec.copy);
-                _console.MarkupLine("will be [green underline]kept[/].");
+                console.MarkupLine("will be [green underline]kept[/].");
             }
             else
             {
-                _console.MarkupLine("will be [red underline]removed[/].");
+                console.MarkupLine("will be [red underline]removed[/].");
             }
         }
 
