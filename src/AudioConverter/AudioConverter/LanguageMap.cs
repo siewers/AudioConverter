@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text;
 
@@ -5,19 +6,12 @@ namespace AudioConverter;
 
 internal static class LanguageMap
 {
-    private static readonly Dictionary<string, string> Cache = new();
+    private static readonly ConcurrentDictionary<string, string> Cache = new();
     private static readonly Stream LanguageMapStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("AudioConverter.LanguageMap.txt")!;
 
     public static string GetLanguageName(string languageCode)
     {
-        if (Cache.TryGetValue(languageCode, out var languageName))
-        {
-            return languageName;
-        }
-
-        languageName = FindLanguageName(languageCode);
-        Cache[languageCode] = languageName;
-        return languageName;
+        return Cache.GetOrAdd(languageCode, FindLanguageName);
     }
 
     private static string FindLanguageName(string languageCode)
