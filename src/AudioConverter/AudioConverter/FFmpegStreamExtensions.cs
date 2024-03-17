@@ -22,7 +22,8 @@ internal static class FFmpegStreamExtensions
 
     public static string ToDisplayString(this IAudioStream stream)
     {
-        return $"{LanguageMap.GetLanguageName(stream.Language)} ({stream.Bitrate / 1000} kb/s, {stream.SampleRate / 1000}.0 kHz, {stream.Channels} channels, {stream.Codec})";
+        var title = string.IsNullOrWhiteSpace(stream.Title) ? string.Empty : $" ({stream.Title})";
+        return $"{LanguageMap.GetLanguageName(stream.Language)}{title} ({stream.Bitrate / 1000} kb/s, {stream.SampleRate / 1000}.0 kHz, {stream.Channels} channels, {stream.Codec})";
     }
 
     public static bool IsDts(this IAudioStream stream)

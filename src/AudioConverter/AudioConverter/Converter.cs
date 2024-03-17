@@ -23,6 +23,7 @@ internal sealed class Converter(IAnsiConsole console, IMediaInfo mediaInfo)
 
         _console.MarkupLine("[green][bold]Media info[/][/]");
         _console.MarkupLineInterpolated($"[bold]Input file:[/] {_mediaInfo.Path}");
+        _console.MarkupLineInterpolated($"[bold]Size:[/] {_mediaInfo.Size.ToFileSizeString()}");
         _console.MarkupLineInterpolated($"[bold]Duration:[/] {_mediaInfo.Duration.ToDurationString()}");
 
         var selectedAudioStreams = await _audioStreamPrompt.SelectAudioStreams(cancellationToken);
@@ -36,39 +37,40 @@ internal sealed class Converter(IAnsiConsole console, IMediaInfo mediaInfo)
 
     private async Task ExecuteConversion(IConversion conversion, CancellationToken cancellationToken)
     {
-        var progress = new Progress(_console)
-            .AutoClear(true)
-            .AutoRefresh(true)
-            .Columns(
-                [
-                    new ProgressBarColumn(),
-                    new PercentageColumn(),
-                    new SpinnerColumn(BinarySpinner.Instance),
-                    new TaskDescriptionColumn(),
-                    new RemainingTimeColumn(),
-                ]
-            );
+        var progress = new Progress(_console).AutoClear(false)
+                                             .Columns(
+                                                      [
+                                                          new ProgressBarColumn(),
+                                                          new PercentageColumn(),
+                                                          new TaskDescriptionColumn(),
+                                                          new RemainingTimeColumn(),
+                                                      ]
+                                                     );
 
-        await progress
-            .StartAsync(
-                async context =>
-                {
-                    var conversionTask = context.AddTask("[green]Converting... [/][grey](press Ctrl+C to cancel)[/]")
-                        .IsIndeterminate(false)
-                        .MaxValue(100);
+        var fileSize = new FileInfo(_mediaInfo.Path).Length;
 
-                    conversion.OnProgress += (_, args) =>
-                    {
-                        conversionTask.Description = $"Foobar {args.Percent}% complete.";
-                        conversionTask.Value(args.Percent);
-                    };
+        await progress.StartAsync(async context =>
+                                  {
+                                      var conversionTask = context.AddTask(GetFileSizeProgressString(0));
 
-                    var conversionResult = await conversion.Start(cancellationToken);
-                    _console.MarkupLineInterpolated($"Conversion completed in [green]{conversionResult.Duration.ToDurationString()}[/].");
-                }
-            );
+                                      conversion.OnProgress += (_, args) =>
+                                                               {
+                                                                   conversionTask.Description = GetFileSizeProgressString(args.Percent);
+                                                                   conversionTask.Value(args.Percent);
+                                                               };
+
+                                      var conversionResult = await conversion.Start(cancellationToken);
+                                      _console.MarkupLineInterpolated($"Conversion completed in [green]{conversionResult.Duration.ToDurationString()}[/].");
+                                  }
+                                 );
 
         AskForOverwrite(conversion.OutputFilePath);
+        return;
+
+        string GetFileSizeProgressString(long progressPercent)
+        {
+            return $"[green]{(fileSize * progressPercent / 100).ToFileSizeString()}[/] of [green]{fileSize.ToFileSizeString()}[/]";
+        }
     }
 
     private void AskForOverwrite(string outputFilePath)

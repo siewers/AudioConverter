@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using Xabe.FFmpeg;
 
@@ -6,7 +7,7 @@ namespace AudioConverter;
 internal static class ModuleInitializer
 {
     [ModuleInitializer]
-    public static void Initialize()
+    public static void InitializeFFmpeg()
     {
         // TODO: Make this configurable or detect automatically
         if (OperatingSystem.IsMacOS())

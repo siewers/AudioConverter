@@ -15,7 +15,7 @@ public class MediaFileSelectionPrompt(IAnsiConsole console)
             case 0:
                 return null;
             case 1:
-                console.MarkupLine($"Found video file: [bold]{validFiles[0].Name}[/]");
+                console.MarkupLineInterpolated($"Found video file: [bold]{validFiles[0].Name}[/]");
                 return validFiles[0];
             default:
             {
