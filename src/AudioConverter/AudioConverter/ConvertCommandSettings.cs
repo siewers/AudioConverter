@@ -7,10 +7,12 @@ internal sealed class ConvertCommandSettings : CommandSettings
 {
     public ConvertCommandSettings(string? videoFilePath)
     {
-        if (videoFilePath?.Length > 0)
+        if (videoFilePath is null || videoFilePath.Length == 0)
         {
-            VideoFilePath = Environment.ExpandEnvironmentVariables(videoFilePath);
+            return;
         }
+
+        VideoFilePath = Environment.ExpandEnvironmentVariables(videoFilePath);
     }
 
     public CancellationToken CancellationToken { get; } = new ConsoleAppCancellationTokenSource().Token;
@@ -20,9 +22,7 @@ internal sealed class ConvertCommandSettings : CommandSettings
     [CommandArgument(0, "[video file path]")]
     public required string? VideoFilePath { get; init; }
 
-    public FileInfo? VideoFile => string.IsNullOrEmpty(VideoFilePath)
-        ? null
-        : new FileInfo(VideoFilePath);
+    public FileInfo? VideoFile => string.IsNullOrEmpty(VideoFilePath) ? null : new FileInfo(VideoFilePath);
 
     public override ValidationResult Validate()
     {

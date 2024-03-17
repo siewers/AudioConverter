@@ -19,9 +19,7 @@ internal sealed class ConvertCommand : AsyncCommand<ConvertCommandSettings>
 
     public override async Task<int> ExecuteAsync(CommandContext context, ConvertCommandSettings settings)
     {
-        var videoFile = settings.VideoFile is null
-            ? await _mediaFileSelectionPrompt.GetMediaFile(settings.WorkingDirectory, settings.CancellationToken)
-            : null;
+        var videoFile = settings.VideoFile ?? await _mediaFileSelectionPrompt.GetMediaFile(settings.WorkingDirectory, settings.CancellationToken);
 
         if (videoFile is null)
         {
@@ -29,30 +27,52 @@ internal sealed class ConvertCommand : AsyncCommand<ConvertCommandSettings>
             return -1;
         }
 
+        var outputVideoFilePath = GetOutputVideoFilePath(videoFile.FullName);
+        
         try
         {
             var mediaInfo = await FFmpeg.GetMediaInfo(videoFile.FullName);
             var converter = new Converter(_console, mediaInfo);
-            await converter.Convert(settings.CancellationToken);
-        }
-        catch (ConversionException ex)
-        {
-            _console.WriteLine();
-            _console.MarkupLine("[red]Conversion failed![/]");
-            _console.MarkupLine($"[red]{ex.Message}[/]");
-        }
-        catch (OperationCanceledException)
-        {
-            _console.WriteLine();
-            _console.MarkupLine("[red]Conversion cancelled![/]");
+            await converter.Convert(outputVideoFilePath, settings.CancellationToken);
+            return 0;
         }
         catch (Exception ex)
         {
             _console.WriteLine();
-            _console.MarkupLine("[red]Conversion failed![/]");
-            _console.WriteException(ex);
-        }
+            switch (ex)
+            {
+                case OperationCanceledException:
+                    _console.MarkupLine("[yellow]Conversion cancelled![/]");
+                    await DeleteFile(outputVideoFilePath);
+                    return 0;
+                case ConversionException:
+                    _console.WriteLine();
+                    _console.MarkupLine("[red]Conversion failed![/]");
+                    _console.MarkupLine($"[red]{ex.Message}[/]");
+                    break;
+            }
 
-        return 0;
+            _console.WriteLine();
+            _console.MarkupLine("[red]Unknown error during conversion![/]");
+            _console.WriteException(ex);
+            return -1;
+        }
+    }
+    
+    private static string GetOutputVideoFilePath(string videoFilePath)
+    {
+        var outputFileExtension = Path.GetExtension(videoFilePath);
+        var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd_HH-mm-ss");
+        var outputFileName = $"{Path.GetFileNameWithoutExtension(videoFilePath)}-converted-{timestamp}{outputFileExtension}";
+        return Path.Combine(Path.GetDirectoryName(videoFilePath)!, outputFileName);
+    }
+
+    private async static Task DeleteFile(string temporaryVideoFilePath)
+    {
+        while (File.Exists(temporaryVideoFilePath))
+        {
+            File.Delete(temporaryVideoFilePath);
+            await Task.Delay(TimeSpan.FromMilliseconds(250));
+        }
     }
 }
