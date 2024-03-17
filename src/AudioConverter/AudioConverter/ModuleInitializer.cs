@@ -17,5 +17,22 @@ internal static class ModuleInitializer
         {
             FFmpeg.SetExecutablesPath("/var/packages/ffmpeg6/target/bin/");
         }
+        else if (OperatingSystem.IsWindows())
+        {
+            var paths = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User)!
+                                   .Split(';')
+                                   .Select(Environment.ExpandEnvironmentVariables);
+
+            var ffmpegPath = paths.FirstOrDefault(p => File.Exists(Path.Combine(p, "ffmpeg.exe")));
+
+            if (ffmpegPath is not null)
+            {
+                FFmpeg.SetExecutablesPath(ffmpegPath);
+            }
+            else
+            {
+                throw new InvalidOperationException("FFmpeg not found in PATH");
+            }
+        }
     }
 }
