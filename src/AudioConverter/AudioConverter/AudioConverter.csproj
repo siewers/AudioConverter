@@ -9,6 +9,7 @@
         <IsPackable>false</IsPackable>
         <StripSymbols>true</StripSymbols>
         <InvariantGlobalization>true</InvariantGlobalization>
+        <AnalysisLevel>latest-Recommended</AnalysisLevel>
     </PropertyGroup>
 
     <ItemGroup>

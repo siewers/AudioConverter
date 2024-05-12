@@ -17,19 +17,6 @@ internal sealed class ConvertCommand : AsyncCommand<ConvertCommandSettings>
         _mediaFileSelectionPrompt = new MediaFileSelectionPrompt(_console);
     }
 
-    private async Task<FileInfo?> TryGetVideoFilePath(ConvertCommandSettings settings)
-    {
-        try
-        {
-            return settings.VideoFile ?? await _mediaFileSelectionPrompt.GetMediaFile(settings.WorkingDirectory, settings.CancellationToken);
-        }
-        catch (TaskCanceledException)
-        {
-        }
-
-        return null;
-    }
-
     public override async Task<int> ExecuteAsync(CommandContext context, ConvertCommandSettings settings)
     {
         var videoFile = await TryGetVideoFilePath(settings);
@@ -74,11 +61,23 @@ internal sealed class ConvertCommand : AsyncCommand<ConvertCommandSettings>
         }
     }
 
+    private async ValueTask<FileInfo?> TryGetVideoFilePath(ConvertCommandSettings settings)
+    {
+        try
+        {
+            return settings.VideoFile ?? await _mediaFileSelectionPrompt.GetMediaFile(settings.WorkingDirectory, settings.CancellationToken);
+        }
+        catch (TaskCanceledException)
+        {
+        }
+
+        return null;
+    }
+
     private static string GetOutputVideoFilePath(string videoFilePath)
     {
-        var outputFileExtension = Path.GetExtension(videoFilePath);
         var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd_HH-mm-ss");
-        var outputFileName = $"{Path.GetFileNameWithoutExtension(videoFilePath)}-converted-{timestamp}{outputFileExtension}";
+        var outputFileName = $"{Path.GetFileNameWithoutExtension(videoFilePath)}-converted-{timestamp}.mkv";
         return Path.Combine(Path.GetDirectoryName(videoFilePath)!, outputFileName);
     }
 

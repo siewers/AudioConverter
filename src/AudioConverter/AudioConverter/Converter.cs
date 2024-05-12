@@ -14,7 +14,7 @@ internal sealed class Converter(IAnsiConsole console, IMediaInfo mediaInfo)
     public async Task Convert(string outputFilePath, CancellationToken cancellationToken)
     {
         var conversion = FFmpeg.Conversions.New().SetOutput(outputFilePath);
-
+        
         foreach (var videoStream in _mediaInfo.VideoStreams)
         {
             videoStream.SetCodec(VideoCodec.copy);
@@ -64,7 +64,11 @@ internal sealed class Converter(IAnsiConsole console, IMediaInfo mediaInfo)
                                   }
                                  );
 
-        AskForOverwrite(conversion.OutputFilePath);
+        var outputFilePath = AskForOverwrite(conversion.OutputFilePath);
+        
+        _console.MarkupLine("[green]Conversion complete![/]");
+        _console.MarkupLine($"[green]File saved to:[/] [bold]{outputFilePath}[/]");
+        
         return;
 
         string GetFileSizeProgressString(long progressPercent)
@@ -73,18 +77,17 @@ internal sealed class Converter(IAnsiConsole console, IMediaInfo mediaInfo)
         }
     }
 
-    private void AskForOverwrite(string outputFilePath)
+    private string AskForOverwrite(string outputFilePath)
     {
         if (_console.Confirm("Do you want to overwrite the original file?"))
         {
             _console.MarkupLine("Moving file, please wait...");
-            File.Move(outputFilePath, _mediaInfo.Path, true);
-        }
-        else
-        {
-            _console.MarkupLineInterpolated($"Output file: [green]{outputFilePath}[/]");
+            var destinationFilePath = Path.ChangeExtension(_mediaInfo.Path, ".mkv");
+            File.Move(outputFilePath, destinationFilePath);
+            File.Delete(_mediaInfo.Path);
+            return destinationFilePath;
         }
 
-        _console.MarkupLine("[green]Done![/]");
+        return outputFilePath;
     }
 }

@@ -6,7 +6,7 @@ public class MediaFileSelectionPrompt(IAnsiConsole console)
 {
     private readonly string[] _validExtensions = [".mkv", ".mp4", ".avi", ".mov", ".wmv", ".flv", ".webm"];
 
-    public async Task<FileInfo?> GetMediaFile(DirectoryInfo workingDirectory, CancellationToken cancellationToken)
+    public async ValueTask<FileInfo?> GetMediaFile(DirectoryInfo workingDirectory, CancellationToken cancellationToken)
     {
         var validFiles = GetValidFiles(workingDirectory).ToArray();
 

@@ -5,7 +5,7 @@ namespace AudioConverter.Prompts;
 
 internal sealed class AudioStreamPrompt(IAnsiConsole console, IReadOnlyCollection<IAudioStream> audioStreams)
 {
-    public async Task<IReadOnlyList<IAudioStream>> SelectAudioStreams(CancellationToken cancellationToken)
+    public async ValueTask<IReadOnlyList<IAudioStream>> SelectAudioStreams(CancellationToken cancellationToken)
     {
         List<IAudioStream> selectedAudioStreams = [];
 

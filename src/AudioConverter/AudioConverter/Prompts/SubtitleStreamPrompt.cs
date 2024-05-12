@@ -6,7 +6,7 @@ namespace AudioConverter.Prompts;
 
 internal sealed class SubtitleStreamPrompt(IAnsiConsole console, IReadOnlyCollection<ISubtitleStream> streams)
 {
-    public async Task<IReadOnlyList<ISubtitleStream>> SelectSubtitles(CancellationToken cancellationToken)
+    public async ValueTask<IReadOnlyList<ISubtitleStream>> SelectSubtitles(CancellationToken cancellationToken)
     {
         var subtitleStreams = streams.ToArray();
         List<ISubtitleStream> selectedSubtitleStreams = [];
@@ -39,16 +39,23 @@ internal sealed class SubtitleStreamPrompt(IAnsiConsole console, IReadOnlyCollec
 
         foreach (var subtitleStream in subtitleStreams)
         {
-            console.MarkupInterpolated($" - [bold]{subtitleStream.ToDisplayString()}[/] ");
+            console.MarkupInterpolated($" - [bold]{subtitleStream.ToDisplayString()}[/] will be ");
 
             if (selectedSubtitleStreams.Contains(subtitleStream))
             {
-                subtitleStream.SetCodec(SubtitleCodec.copy);
-                console.MarkupLine("will be [green underline]kept[/].");
+                if (subtitleStream.Codec != SubtitleCodec.srt.ToString())
+                {
+                    subtitleStream.SetCodec(SubtitleCodec.srt);
+                    console.MarkupLine("[yellow underline]converted to SRT[/].");
+                }
+                else
+                {
+                    console.MarkupLine("[green underline]kept[/].");
+                }
             }
             else
             {
-                console.MarkupLine("will be [red underline]removed[/].");
+                console.MarkupLine("[red underline]removed[/].");
             }
         }
 

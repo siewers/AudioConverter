@@ -1,6 +1,6 @@
 namespace AudioConverter;
 
-internal sealed class ConsoleAppCancellationTokenSource
+internal sealed class ConsoleAppCancellationTokenSource : IDisposable
 {
     private readonly CancellationTokenSource _cancellationTokenSource = new();
 
@@ -34,5 +34,10 @@ internal sealed class ConsoleAppCancellationTokenSource
         }
 
         _cancellationTokenSource.Cancel();
+    }
+
+    public void Dispose()
+    {
+        _cancellationTokenSource.Dispose();
     }
 }
